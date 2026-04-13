@@ -1,0 +1,49 @@
+<%- include('partials/header') %>
+
+<header class="dashboard-header">
+    <h1>Welcome, <%= username %></h1>
+    <a href="/auth/logout" class="btn btn-logout">Logout</a>
+</header>
+
+<section class="task-input-section">
+    <form action="/tasks" method="POST" class="add-task-form">
+        <input type="text" name="title" placeholder="What needs to be done?" required autocomplete="off">
+        <button type="submit" class="btn btn-primary">Add Task</button>
+    </form>
+</section>
+
+<nav class="task-filters">
+    <a href="/tasks" class="<%= currentFilter === 'all' ? 'active' : '' %>">All</a>
+    <a href="/tasks?status=pending" class="<%= currentFilter === 'pending' ? 'active' : '' %>">Pending</a>
+    <a href="/tasks?status=completed" class="<%= currentFilter === 'completed' ? 'active' : '' %>">Completed</a>
+</nav>
+
+<section class="task-list-section">
+    <% if (tasks.length === 0) { %>
+        <p class="empty-state">No tasks found.</p>
+    <% } else { %>
+        <ul class="task-list">
+            <% tasks.forEach(task => { %>
+                <li class="task-item <%= task.status === 'completed' ? 'completed-task' : '' %>">
+                    <span class="task-title"><%= task.title %></span>
+                    
+                    <div class="task-actions">
+                        <% if (task.status === 'pending') { %>
+                            <form action="/tasks/<%= task._id %>/status" method="POST">
+                                <input type="hidden" name="status" value="completed">
+                                <button type="submit" class="btn btn-success">✓</button>
+                            </form>
+                        <% } %>
+                        
+                        <form action="/tasks/<%= task._id %>/status" method="POST">
+                            <input type="hidden" name="status" value="deleted">
+                            <button type="submit" class="btn btn-danger">✗</button>
+                        </form>
+                    </div>
+                </li>
+            <% }) %>
+        </ul>
+    <% } %>
+</section>
+
+<%- include('partials/footer') %>
