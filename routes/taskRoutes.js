@@ -14,7 +14,10 @@ router.get('/', taskController.getTasks);
 router.post('/', taskController.createTask);
 
 // Update a task's status (Mark as completed or deleted)
-// Note: HTML forms only support GET and POST, so we use POST here for the status update
+// Note: HTML forms only support GET and POST, so I use POST here for the status update
 router.post('/:id/status', taskController.updateTaskStatus);
+
+// Edit task
+router.post('/:id/edit', authGuard, taskController.editTask);
 
 module.exports = router;

@@ -39,11 +39,42 @@
                             <input type="hidden" name="status" value="deleted">
                             <button type="submit" class="btn btn-danger">✗</button>
                         </form>
+
+                        <div class="task-actions">
+                            <button onclick="triggerEdit('<%= task._id %>', `<%= task.title %>`)" class="btn btn-edit">✎</button>
+
+                            <form action="/tasks/<%= task._id %>/complete" method="POST">...</form>
+                        </div>
                     </div>
                 </li>
             <% }) %>
         </ul>
     <% } %>
 </section>
+
+
+<form id="editForm" method="POST" action="" style="display: none;">
+    <input type="hidden" name="title" id="editTitleInput">
+</form>
+
+<script>
+    function triggerEdit(taskId, currentTitle) {
+        // Pop up a prompt with the current text already inside it
+        const updatedTitle = prompt("Edit your task:", currentTitle);
+
+        // If they typed something new and didn't hit cancel
+        if (updatedTitle && updatedTitle.trim() !== "" && updatedTitle !== currentTitle) {
+            
+            // Grab the hidden form
+            const form = document.getElementById('editForm');
+            const input = document.getElementById('editTitleInput');
+            
+            // Fill it with the correct URL and the new text, then submit it
+            form.action = `/tasks/${taskId}/edit`;
+            input.value = updatedTitle;
+            form.submit();
+        }
+    }
+</script>
 
 <%- include('partials/footer') %>

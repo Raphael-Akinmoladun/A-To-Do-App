@@ -82,3 +82,23 @@ exports.updateTaskStatus = async (req, res, next) => {
         next(error);
     }
 };
+
+
+// Editing task
+exports.editTask = async (req, res, next) => {
+    try {
+        const taskId = req.params.id;
+        const newTitle = req.body.title;
+
+        // Find the task by both ID and the logged-in User's ID, then update the title
+        await Task.findOneAndUpdate(
+            { _id: taskId, userId: req.session.userId },
+            { title: newTitle }
+        );
+
+        // Redirect back to the dashboard
+        res.redirect('/tasks');
+    } catch (error) {
+        next(error);
+    }
+};
