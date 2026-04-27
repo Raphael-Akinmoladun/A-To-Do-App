@@ -25,7 +25,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // 3. Session Setup (For Authentication)
 app.use(session({
-    // In production, this should be securely stored in a .env file
     secret: process.env.SESSION_SECRET || 'super_secret_development_key',
     resave: false, // Don't save session if unmodified
     saveUninitialized: false, // Don't create session until something is stored
