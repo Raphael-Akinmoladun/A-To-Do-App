@@ -27,6 +27,14 @@ process.on('uncaughtException', (err) => {
             logger.info(`Server is actively running on http://localhost:${PORT}`);
         });
 
+        // Initialize Socket.io
+        const socket = require('./utils/socket');
+        socket.init(server);
+
+        // Initialize Cron Jobs
+        const cronJobs = require('./utils/cronJobs');
+        cronJobs.initCronJobs();
+
         // Catch asynchronous promise rejections (like the database dropping connection later)
         process.on('unhandledRejection', (err) => {
             logger.error('UNHANDLED PROMISE REJECTION! Shutting down server...', err);

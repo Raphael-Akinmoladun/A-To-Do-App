@@ -64,7 +64,7 @@ label {
 }
 
 /* Inputs */
-input[type="text"], input[type="password"] {
+input[type="text"], input[type="email"], input[type="password"] {
     width: 100%;
     padding: 0.85rem 1rem;
     background: var(--input-bg);
@@ -76,7 +76,7 @@ input[type="text"], input[type="password"] {
     box-sizing: border-box;
 }
 
-input[type="text"]:focus, input[type="password"]:focus {
+input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.2);
@@ -157,6 +157,31 @@ input::placeholder {
 
 .add-task-form input { flex: 1; margin: 0; }
 .add-task-form button { width: auto; white-space: nowrap; }
+
+/* Date Picker styling to match Add Task button */
+.date-picker-input {
+    background: var(--primary-color) !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.85rem 1rem !important;
+    border-radius: 8px !important;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 0 0 auto !important; /* Prevent it from flexing too wide */
+    margin-left: 10px !important;
+}
+
+.date-picker-input:hover {
+    background: var(--primary-hover) !important;
+    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+}
+
+/* Forcing the little calendar icon to be white so it's visible on the colored background */
+.date-picker-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
 
 /* Modern Pill Filters */
 .task-filters {

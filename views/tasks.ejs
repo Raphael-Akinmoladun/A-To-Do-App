@@ -8,7 +8,8 @@
 <section class="task-input-section">
     <form action="/tasks" method="POST" class="add-task-form">
         <input type="text" name="title" placeholder="What needs to be done?" required autocomplete="off">
-        <button type="submit" class="btn btn-primary">Add Task</button>
+        <input type="datetime-local" name="dueDate" class="date-picker-input">
+        <button type="submit" class="btn btn-primary" style="margin-left: 10px;">Add Task</button>
     </form>
 </section>
 
@@ -24,8 +25,16 @@
     <% } else { %>
         <ul class="task-list">
             <% tasks.forEach(task => { %>
-                <li class="task-item <%= task.status === 'completed' ? 'completed-task' : '' %>">
-                    <span class="task-title"><%= task.title %></span>
+                <li class="task-item <%= task.status === 'completed' ? 'completed-task' : (task.status === 'overdue' ? 'overdue-task' : '') %>" style="<%= task.status === 'overdue' ? 'border-left: 4px solid red;' : '' %>">
+                    <div style="display: flex; flex-direction: column;">
+                        <span class="task-title"><%= task.title %></span>
+                        <% if (task.dueDate) { %>
+                            <span class="task-due-date" style="font-size: 0.8rem; color: #888;">Due: <%= new Date(task.dueDate).toLocaleString() %></span>
+                        <% } %>
+                        <% if (task.status === 'overdue') { %>
+                            <span style="color: red; font-size: 0.8rem; font-weight: bold;">[OVERDUE]</span>
+                        <% } %>
+                    </div>
                     
                     <div class="task-actions">
                         <% if (task.status === 'pending') { %>
@@ -74,6 +83,32 @@
             input.value = updatedTitle;
             form.submit();
         }
+    }
+</script>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const token = "<%= typeof token !== 'undefined' ? token : '' %>";
+    if (token) {
+        const socket = io({
+            auth: { token }
+        });
+
+        socket.on('task_completed', (data) => {
+            alert("Notification: " + data.message);
+            // Optional: dynamically update DOM instead of reload
+            // location.reload();
+        });
+
+        socket.on('task_overdue', (data) => {
+            alert("Notification: " + data.message);
+            // Reload to reflect overdue status in UI
+            location.reload();
+        });
+
+        socket.on('connect_error', (err) => {
+            console.error("Socket connection error:", err.message);
+        });
     }
 </script>
 

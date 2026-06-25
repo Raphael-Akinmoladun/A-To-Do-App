@@ -24,7 +24,8 @@ exports.getTasks = async (req, res, next) => {
         res.render('tasks', { 
             tasks, 
             username: req.session.username,
-            currentFilter: filterStatus || 'all'
+            currentFilter: filterStatus || 'all',
+            token: req.session.token || ''
         });
     } catch (error) {
         next(error);
@@ -34,7 +35,7 @@ exports.getTasks = async (req, res, next) => {
 // Create a new task
 exports.createTask = async (req, res, next) => {
     try {
-        const { title } = req.body;
+        const { title, dueDate } = req.body;
 
         if (!title || title.trim() === '') {
             // If empty, just redirect back
@@ -44,7 +45,8 @@ exports.createTask = async (req, res, next) => {
         const newTask = new Task({
             title: title.trim(),
             status: 'pending', // Default state
-            user: req.session.userId
+            user: req.session.userId,
+            dueDate: dueDate ? new Date(dueDate) : undefined
         });
 
         await newTask.save();
@@ -74,6 +76,15 @@ exports.updateTaskStatus = async (req, res, next) => {
         // Handle missing data using AppError
         if (!updatedTask) {
             return next(new AppError('Task not found or you do not have permission to edit it.', 404));
+        }
+
+        if (status === 'completed') {
+            const socket = require('../utils/socket');
+            socket.notifyUser(req.session.userId, 'task_completed', {
+                taskId: updatedTask._id,
+                title: updatedTask.title,
+                message: `Task "${updatedTask.title}" has been completed!`
+            });
         }
 
         res.redirect('/tasks');

@@ -4,8 +4,12 @@ const taskSchema = new mongoose.Schema({
     title: { type: String, required: true },
     status: { 
         type: String, 
-        enum: ['pending', 'completed', 'deleted'], 
+        enum: ['pending', 'completed', 'overdue', 'deleted'], 
         default: 'pending' 
+    },
+    dueDate: {
+        type: Date,
+        required: false // Optional, but can be set by the user
     },
     user: { 
         type: mongoose.Schema.Types.ObjectId, 

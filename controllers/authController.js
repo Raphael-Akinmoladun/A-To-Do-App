@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 // Render Signup Page
 exports.getSignup = (req, res) => {
@@ -9,12 +10,12 @@ exports.getSignup = (req, res) => {
 // Handle Signup Logic
 exports.postSignup = async (req, res, next) => {
     try {
-        const { username, password } = req.body;
+        const { username, email, password } = req.body;
 
         // Check if user already exists
-        const existingUser = await User.findOne({ username });
+        const existingUser = await User.findOne({ $or: [{ username }, { email }] });
         if (existingUser) {
-            return res.render('signup', { error: 'Username already taken.' });
+            return res.render('signup', { error: 'Username or email already taken.' });
         }
 
         // Hash the password for security
@@ -23,6 +24,7 @@ exports.postSignup = async (req, res, next) => {
         // Create and save the new user
         const newUser = new User({
             username,
+            email,
             password: hashedPassword
         });
         await newUser.save();
@@ -58,6 +60,11 @@ exports.postLogin = async (req, res, next) => {
         // Save user session
         req.session.userId = user._id;
         req.session.username = user.username;
+
+        // Generate JWT token for WebSockets
+        const jwtSecret = process.env.JWT_SECRET || 'super_secret_jwt_key';
+        const token = jwt.sign({ id: user._id }, jwtSecret, { expiresIn: '1d' });
+        req.session.token = token;
 
         res.redirect('/tasks');
     } catch (error) {
