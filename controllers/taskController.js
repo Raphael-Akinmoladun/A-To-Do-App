@@ -71,7 +71,7 @@ exports.updateTaskStatus = async (req, res, next) => {
             { _id: taskId, user: req.session.userId }, 
             { status: status },
             { new: true } // Returns the updated document
-        );
+        ).populate('user');
 
         // Handle missing data using AppError
         if (!updatedTask) {
@@ -79,12 +79,23 @@ exports.updateTaskStatus = async (req, res, next) => {
         }
 
         if (status === 'completed') {
+            // Notify via WebSocket
             const socket = require('../utils/socket');
             socket.notifyUser(req.session.userId, 'task_completed', {
                 taskId: updatedTask._id,
                 title: updatedTask.title,
                 message: `Task "${updatedTask.title}" has been completed!`
             });
+
+            // Notify via Email
+            if (updatedTask.user && updatedTask.user.email) {
+                const { sendEmail } = require('../utils/emailService');
+                await sendEmail(
+                    updatedTask.user.email,
+                    'Task Completed!',
+                    `Hello ${updatedTask.user.username},\n\nGreat job! You have successfully completed your task: "${updatedTask.title}".\n\nKeep up the good work!`
+                );
+            }
         }
 
         res.redirect('/tasks');
