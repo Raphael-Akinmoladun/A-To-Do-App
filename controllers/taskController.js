@@ -70,7 +70,7 @@ exports.updateTaskStatus = async (req, res, next) => {
         const updatedTask = await Task.findOneAndUpdate(
             { _id: taskId, user: req.session.userId }, 
             { status: status },
-            { new: true } // Returns the updated document
+            { returnDocument: 'after' } // Returns the updated document
         ).populate('user');
 
         // Handle missing data using AppError

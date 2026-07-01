@@ -17,9 +17,7 @@ const createTransporter = async () => {
 
     // Real SMTP
     transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST.trim(),
-      port: port,
-      secure: port === 465, // true for 465, false for other ports
+      service: "gmail",
       auth: {
         user: process.env.SMTP_USER.trim(),
         pass: process.env.SMTP_PASS.trim(),
@@ -27,6 +25,9 @@ const createTransporter = async () => {
       tls: {
         rejectUnauthorized: false,
       },
+      connectionTimeout: 10000, // 10 seconds timeout to prevent hanging
+      greetingTimeout: 10000,
+      socketTimeout: 10000,
     });
   } else {
     // Fallback to Ethereal email for local testing
