@@ -7,9 +7,11 @@
 
 <section class="task-input-section">
     <form action="/tasks" method="POST" class="add-task-form">
-        <input type="text" name="title" placeholder="What needs to be done?" required autocomplete="off">
-        <input type="datetime-local" name="dueDate" class="date-picker-input">
-        <button type="submit" class="btn btn-primary" style="margin-left: 10px;">Add Task</button>
+        <input type="text" name="title" class="main-task-input" placeholder="What needs to be done?" required autocomplete="off">
+        <div class="task-form-controls">
+            <input type="datetime-local" name="dueDate" class="date-picker-input">
+            <button type="submit" class="btn btn-primary">Add Task</button>
+        </div>
     </form>
 </section>
 

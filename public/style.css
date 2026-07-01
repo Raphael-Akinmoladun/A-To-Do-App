@@ -151,12 +151,25 @@ input::placeholder {
 
 .add-task-form {
     display: flex;
+    flex-direction: column;
     gap: 12px;
     margin-bottom: 2rem;
 }
 
-.add-task-form input { flex: 1; margin: 0; }
-.add-task-form button { width: auto; white-space: nowrap; }
+.add-task-form .main-task-input { 
+    width: 100%; 
+    margin: 0; 
+}
+
+.task-form-controls {
+    display: flex;
+    gap: 12px;
+}
+
+.task-form-controls button { 
+    width: auto; 
+    white-space: nowrap; 
+}
 
 /* Date Picker styling to match Add Task button */
 .date-picker-input {
@@ -168,8 +181,8 @@ input::placeholder {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    flex: 0 0 auto !important; /* Prevent it from flexing too wide */
-    margin-left: 10px !important;
+    flex: 1; /* Allow it to take up remaining space or size with content */
+    margin: 0 !important;
 }
 
 .date-picker-input:hover {
