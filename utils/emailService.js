@@ -1,76 +1,32 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-// Setup Nodemailer transporter
-// Using ethereal for dev if no real SMTP variables are present
-const createTransporter = async () => {
-  let transporter;
-
-  console.log("[Email Service] Checking SMTP Variables:", {
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    user: process.env.SMTP_USER,
-    hasPassword: !!process.env.SMTP_PASS,
-  });
-
-  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-    const port = parseInt(process.env.SMTP_PORT) || 587;
-
-    // Real SMTP
-    transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER.trim(),
-        pass: process.env.SMTP_PASS.trim(),
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-      connectionTimeout: 20000, // 20 seconds timeout to prevent hanging
-      greetingTimeout: 20000,
-      socketTimeout: 20000,
-    });
-  } else {
-    // Fallback to Ethereal email for local testing
-    const testAccount = await nodemailer.createTestAccount();
-    transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
-      port: 587,
-      secure: false,
-      auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
-      },
-    });
-    console.log("No SMTP config found. Using Ethereal Email for testing.");
-  }
-  return transporter;
-};
-
-// We will initialize the transporter once
-let transporterInstance = null;
+// Initialize Resend with your API key
+// It will fall back to a placeholder if the key is missing to prevent app crashes
+const resend = new Resend(process.env.RESEND_API_KEY || "re_123456789");
 
 const sendEmail = async (to, subject, text) => {
   try {
-    if (!transporterInstance) {
-      transporterInstance = await createTransporter();
+    if (!process.env.RESEND_API_KEY) {
+      console.log("No RESEND_API_KEY found. Skipping real email send.");
+      console.log(`[Mock Email] To: ${to} | Subject: ${subject}`);
+      return;
     }
 
-    const info = await transporterInstance.sendMail({
-      from: '"To-Do App" <noreply@todoapp.com>',
-      to,
-      subject,
-      text,
+    const { data, error } = await resend.emails.send({
+      from: "To-Do App <onboarding@resend.dev>", // Resend's default testing domain
+      to: [to],
+      subject: subject,
+      text: text,
     });
 
-    console.log("Email sent: %s", info.messageId);
-    // If using Ethereal, log the preview URL
-    if (!process.env.SMTP_HOST) {
-      console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+    if (error) {
+      console.error("Failed to send email via Resend:", error);
+      return;
     }
+
+    console.log("Email sent successfully via Resend. ID:", data.id);
   } catch (error) {
-    console.error("Failed to send email:", error);
+    console.error("Unexpected error sending email:", error);
   }
 };
 
