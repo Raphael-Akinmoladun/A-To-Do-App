@@ -12,6 +12,20 @@ const initCronJobs = () => {
         console.log('[CronJob] ⏰ Tick — checking for overdue tasks...');
         try {
             const now = new Date();
+            console.log(`[CronJob] Server time (UTC): ${now.toISOString()}`);
+
+            // DEBUG: show ALL pending tasks and their dueDates to spot timezone issues
+            const allPending = await Task.find({ status: 'pending', dueDate: { $ne: null } });
+            if (allPending.length === 0) {
+                console.log('[CronJob] DEBUG: No pending tasks with a dueDate exist in the DB at all.');
+            } else {
+                console.log(`[CronJob] DEBUG: ${allPending.length} pending task(s) with dueDates found:`);
+                allPending.forEach(t => {
+                    const due = new Date(t.dueDate);
+                    const isOverdue = due < now;
+                    console.log(`  → "${t.title}" | dueDate (UTC): ${due.toISOString()} | Overdue? ${isOverdue ? '✅ YES' : '❌ NO (not yet)'}`);
+                });
+            }
 
             // Find tasks that are pending and have a due date in the past
             const overdueTasks = await Task.find({
