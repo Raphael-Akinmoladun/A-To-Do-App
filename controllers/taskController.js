@@ -88,13 +88,21 @@ exports.updateTaskStatus = async (req, res, next) => {
             });
 
             // Notify via Email
+            console.log(`[TaskController] Task "${updatedTask.title}" marked completed. Checking if email should be sent...`);
+            console.log(`[TaskController] updatedTask.user populated: ${updatedTask.user ? 'YES' : 'NO'}`);
+
             if (updatedTask.user && updatedTask.user.email) {
+                console.log(`[TaskController] Sending completion email to: ${updatedTask.user.email}`);
                 const { sendEmail } = require('../utils/emailService');
-                await sendEmail(
+                const result = await sendEmail(
                     updatedTask.user.email,
                     'Task Completed!',
                     `Hello ${updatedTask.user.username},\n\nGreat job! You have successfully completed your task: "${updatedTask.title}".\n\nKeep up the good work!`
                 );
+                console.log(`[TaskController] Completion email result:`, JSON.stringify(result));
+            } else {
+                console.warn(`[TaskController] ⚠️ No email found on user object. Email not sent.`);
+                console.warn(`[TaskController] user object:`, JSON.stringify(updatedTask.user));
             }
         }
 

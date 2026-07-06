@@ -5,29 +5,39 @@ const socket = require('./socket');
 const { sendEmail } = require('./emailService');
 
 const initCronJobs = () => {
+    console.log('[CronJob] Registering overdue task checker (runs every minute)...');
+
     // Run every minute
     cron.schedule('* * * * *', async () => {
+        console.log('[CronJob] ⏰ Tick — checking for overdue tasks...');
         try {
             const now = new Date();
-            
+
             // Find tasks that are pending and have a due date in the past
             const overdueTasks = await Task.find({
                 status: 'pending',
                 dueDate: { $lt: now, $ne: null }
             }).populate('user');
 
+            console.log(`[CronJob] Found ${overdueTasks.length} overdue task(s).`);
+
             for (const task of overdueTasks) {
+                console.log(`[CronJob] Processing task: "${task.title}" (ID: ${task._id})`);
+
                 // Update status to overdue
                 task.status = 'overdue';
                 await task.save();
+                console.log(`[CronJob] Task "${task.title}" marked as overdue.`);
 
                 const user = task.user;
 
                 // If the user was deleted from the database, skip notifications
                 if (!user) {
-                    console.log(`Task ${task._id} is overdue but has no valid user attached. Skipping notifications.`);
+                    console.warn(`[CronJob] ⚠️ Task ${task._id} has no valid user. Skipping notifications.`);
                     continue;
                 }
+
+                console.log(`[CronJob] User found: ${user.username} | Email: ${user.email || 'NO EMAIL ON RECORD'}`);
 
                 // Notify via WebSocket
                 socket.notifyUser(user._id, 'task_overdue', {
@@ -38,19 +48,24 @@ const initCronJobs = () => {
 
                 // Notify via Email
                 if (user.email) {
-                    await sendEmail(
+                    console.log(`[CronJob] Sending overdue email to ${user.email}...`);
+                    const result = await sendEmail(
                         user.email,
                         'Task Overdue Notice',
                         `Hello ${user.username},\n\nYour task "${task.title}" is now overdue.\n\nPlease log in to complete it.`
                     );
+                    console.log(`[CronJob] Email result for task "${task.title}":`, JSON.stringify(result));
+                } else {
+                    console.warn(`[CronJob] ⚠️ User "${user.username}" has no email. Skipping email notification.`);
                 }
             }
         } catch (error) {
-            console.error('Error in cron job for overdue tasks:', error);
+            console.error('[CronJob] 🚨 Error in overdue task cron job:', error.message);
+            console.error(error.stack);
         }
     });
 
-    console.log('Cron jobs initialized');
+    console.log('[CronJob] ✅ Cron jobs initialized.');
 };
 
 module.exports = { initCronJobs };
