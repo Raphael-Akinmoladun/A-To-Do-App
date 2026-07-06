@@ -106,7 +106,7 @@ exports.updateTaskStatus = async (req, res, next) => {
             }
         }
 
-        res.redirect('/tasks');
+        res.redirect(`/tasks?completed=1&task=${encodeURIComponent(updatedTask.title)}`);
     } catch (error) {
         // System errors automatically fall down here
         next(error);

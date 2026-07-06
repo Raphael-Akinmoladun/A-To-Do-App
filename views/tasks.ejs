@@ -6,10 +6,13 @@
 </header>
 
 <section class="task-input-section">
-    <form action="/tasks" method="POST" class="add-task-form">
+    <form action="/tasks" method="POST" class="add-task-form" id="addTaskForm">
         <input type="text" name="title" class="main-task-input" placeholder="What needs to be done?" required autocomplete="off">
         <div class="task-form-controls">
-            <input type="datetime-local" name="dueDate" class="date-picker-input">
+            <!-- Visible picker: does NOT get submitted (no name attribute) -->
+            <input type="datetime-local" id="dueDateLocal" class="date-picker-input">
+            <!-- Hidden field that actually gets submitted as UTC ISO string -->
+            <input type="hidden" name="dueDate" id="dueDateUTC">
             <button type="submit" class="btn btn-primary">Add Task</button>
         </div>
     </form>
@@ -69,47 +72,143 @@
 </form>
 
 <script>
-    function triggerEdit(taskId, currentTitle) {
-        // Pop up a prompt with the current text already inside it
-        const updatedTitle = prompt("Edit your task:", currentTitle);
+    // ── UTC Timezone Fix for datetime-local picker ────────────────
+    // The browser's datetime-local sends time in LOCAL format (no timezone).
+    // We intercept the form submit and convert it to a true UTC ISO string
+    // before sending to the server, so the cron job compares correctly.
+    document.getElementById('addTaskForm').addEventListener('submit', function (e) {
+        const localInput = document.getElementById('dueDateLocal');
+        const utcInput   = document.getElementById('dueDateUTC');
 
-        // If they typed something new and didn't hit cancel
+        if (localInput.value) {
+            // new Date() in the BROWSER interprets datetime-local as LOCAL time
+            const localDate = new Date(localInput.value);
+            utcInput.value  = localDate.toISOString(); // e.g. "2026-07-06T20:13:00.000Z"
+        }
+        // If no date was picked, leave utcInput empty → server treats it as no dueDate
+    });
+
+    // ── Edit Task ─────────────────────────────────────────────────
+    function triggerEdit(taskId, currentTitle) {
+        const updatedTitle = prompt("Edit your task:", currentTitle);
         if (updatedTitle && updatedTitle.trim() !== "" && updatedTitle !== currentTitle) {
-            
-            // Grab the hidden form
-            const form = document.getElementById('editForm');
+            const form  = document.getElementById('editForm');
             const input = document.getElementById('editTitleInput');
-            
-            // Fill it with the correct URL and the new text, then submit it
-            form.action = `/tasks/${taskId}/edit`;
-            input.value = updatedTitle;
+            form.action  = `/tasks/${taskId}/edit`;
+            input.value  = updatedTitle;
             form.submit();
         }
     }
 </script>
 
+<!-- Toast Notification Styles -->
+<style>
+    #toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .toast {
+        min-width: 280px;
+        max-width: 360px;
+        padding: 14px 18px;
+        border-radius: 10px;
+        color: #fff;
+        font-size: 0.9rem;
+        font-weight: 500;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        animation: slideIn 0.3s ease;
+        cursor: pointer;
+    }
+    .toast.success { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    .toast.warning { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .toast.info    { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    .toast .toast-icon { font-size: 1.2rem; flex-shrink: 0; }
+    .toast .toast-body { display: flex; flex-direction: column; gap: 2px; }
+    .toast .toast-title { font-weight: 700; font-size: 0.95rem; }
+    .toast .toast-msg { font-weight: 400; opacity: 0.9; }
+    @keyframes slideIn {
+        from { transform: translateX(120%); opacity: 0; }
+        to   { transform: translateX(0);   opacity: 1; }
+    }
+    @keyframes fadeOut {
+        from { opacity: 1; transform: translateX(0); }
+        to   { opacity: 0; transform: translateX(120%); }
+    }
+</style>
+
+<div id="toast-container"></div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
+    // ── Toast Helper ──────────────────────────────────────────────
+    function showToast(title, message, type = 'info', duration = 5000) {
+        const container = document.getElementById('toast-container');
+        const icons = { success: '✅', warning: '⚠️', info: 'ℹ️' };
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.innerHTML = `
+            <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+            <div class="toast-body">
+                <span class="toast-title">${title}</span>
+                <span class="toast-msg">${message}</span>
+            </div>
+        `;
+        toast.onclick = () => removeToast(toast);
+        container.appendChild(toast);
+
+        setTimeout(() => removeToast(toast), duration);
+    }
+
+    function removeToast(toast) {
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }
+
+    // ── Show toast from URL param (for task_completed after redirect) ──
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('completed') === '1') {
+        const taskTitle = decodeURIComponent(urlParams.get('task') || 'Your task');
+        showToast('Task Completed! 🎉', `"${taskTitle}" has been marked as done.`, 'success');
+        // Clean URL without reloading
+        window.history.replaceState({}, '', '/tasks');
+    }
+
+    // ── Socket.io Live Notifications ──────────────────────────────
     const token = "<%= typeof token !== 'undefined' ? token : '' %>";
     if (token) {
-        const socket = io({
-            auth: { token }
-        });
+        const socket = io({ auth: { token } });
 
-        socket.on('task_completed', (data) => {
-            alert("Notification: " + data.message);
-            // Optional: dynamically update DOM instead of reload
-            // location.reload();
+        socket.on('connect', () => {
+            console.log('[Socket] Connected:', socket.id);
         });
 
         socket.on('task_overdue', (data) => {
-            alert("Notification: " + data.message);
-            // Reload to reflect overdue status in UI
-            location.reload();
+            console.log('[Socket] task_overdue event received:', data);
+            showToast('Task Overdue! ⏰', data.message, 'warning', 7000);
+            // Reload after a short delay so user can read the toast
+            setTimeout(() => location.reload(), 3000);
+        });
+
+        socket.on('task_completed', (data) => {
+            console.log('[Socket] task_completed event received:', data);
+            showToast('Task Completed! 🎉', data.message, 'success');
         });
 
         socket.on('connect_error', (err) => {
-            console.error("Socket connection error:", err.message);
+            console.error('[Socket] Connection error:', err.message);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('[Socket] Disconnected');
         });
     }
 </script>
