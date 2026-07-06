@@ -12,11 +12,11 @@ exports.getTasks = async (req, res, next) => {
 
         // If a specific status is requested, add it to the query
         // We generally don't want to show 'deleted' tasks in the main view unless specified
-        if (filterStatus && ['pending', 'completed'].includes(filterStatus)) {
+        if (filterStatus && ['pending', 'completed', 'overdue'].includes(filterStatus)) {
             query.status = filterStatus;
         } else {
-            // Default: show pending and completed, hide deleted
-            query.status = { $in: ['pending', 'completed'] }; 
+            // Default: show pending, completed, and overdue — hide deleted
+            query.status = { $in: ['pending', 'completed', 'overdue'] };
         }
 
         const tasks = await Task.find(query).sort({ createdAt: -1 }); // Newest first
@@ -26,6 +26,22 @@ exports.getTasks = async (req, res, next) => {
             username: req.session.username,
             currentFilter: filterStatus || 'all',
             token: req.session.token || ''
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// Lightweight JSON endpoint — polled by the frontend every 30s to detect new overdue tasks
+exports.getOverdueCheck = async (req, res, next) => {
+    try {
+        const overdueTasks = await Task.find({
+            user: req.session.userId,
+            status: 'overdue'
+        }).select('_id title');
+
+        res.json({
+            overdueTasks: overdueTasks.map(t => ({ id: t._id.toString(), title: t.title }))
         });
     } catch (error) {
         next(error);
@@ -104,6 +120,10 @@ exports.updateTaskStatus = async (req, res, next) => {
                 console.warn(`[TaskController] ⚠️ No email found on user object. Email not sent.`);
                 console.warn(`[TaskController] user object:`, JSON.stringify(updatedTask.user));
             }
+        }
+
+        if (status === 'deleted') {
+            return res.redirect(`/tasks?deleted=1&task=${encodeURIComponent(updatedTask.title)}`);
         }
 
         res.redirect(`/tasks?completed=1&task=${encodeURIComponent(updatedTask.title)}`);
